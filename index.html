@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Libérateur de RAM - Control Panel</title>
+    <style>
+        :root {
+            --bg: #f4f7f6;
+            --card: #ffffff;
+            --primary: #2ecc71;
+            --danger: #e74c3c;
+            --text: #2c3e50;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { background: var(--card); padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        .status-badge { padding: 10px 20px; border-radius: 50px; font-weight: bold; margin-bottom: 20px; display: inline-block; }
+        .status-off { background: #ffeaa7; color: #d35400; }
+        .status-on { background: #dff9fb; color: #0984e3; }
+        .ram-info { font-size: 2.5rem; font-weight: bold; margin: 20px 0; color: #0984e3; }
+        .controls button { border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold; transition: 0.3s; margin: 5px; width: 120px; }
+        .btn-on { background: var(--primary); color: white; }
+        .btn-off { background: var(--danger); color: white; }
+        .btn-on:hover { background: #27ae60; }
+        .btn-off:hover { background: #c0392b; }
+        .tunnel-config { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+        input { padding: 10px; border: 1px solid #ddd; border-radius: 5px; width: 80%; margin-bottom: 10px; }
+        .help-text { font-size: 0.8rem; color: #7f8c8d; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Libérateur de RAM</h2>
+
+        <div class="tunnel-config">
+            <input type="text" id="tunnel_url" placeholder="Ex: https://abcd-123.ngrok-free.app">
+            <button onclick="updateBase()" style="padding: 5px 15px; background: #34495e; color: white; border-radius: 5px; border: none; cursor: pointer;">Connecter</button>
+            <p class="help-text">Laissez vide si l'agent est sur ce PC (127.0.0.1)</p>
+        </div>
+
+        <div id="statusBadge" class="status-badge status-off">🟠 Agent en pause</div>
+        
+        <div class="ram-info"><span id="ramVal">--</span>%</div>
+        <p>Utilisation de la mémoire RAM</p>
+
+        <div class="controls">
+            <button class="btn-on" onclick="control('start')">🟢 ON</button>
+            <button class="btn-off" onclick="control('stop')">🔴 OFF</button>
+        </div>
+
+        <div style="margin-top: 25px;">
+            <a href="agent_local.exe" download>
+                <button style="background: none; border: 1px solid #3498db; color: #3498db; padding: 10px; border-radius: 5px; cursor: pointer;">📥 Télécharger l'Agent (.exe)</button>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        let BASE = "http://127.0.0.1:8765";
+        const KEY = "GO3D-LOCAL-KEY";
+
+        function updateBase() {
+            const inputVal = document.getElementById('tunnel_url').value.trim();
+            if (inputVal !== "") {
+                // On s'assure que l'URL ne finit pas par un /
+                BASE = inputVal.endsWith('/') ? inputVal.slice(0, -1) : inputVal;
+                alert("Connecté à : " + BASE);
+            } else {
+                BASE = "http://127.0.0.1:8765";
+                alert("Retour au mode local (127.0.0.1)");
+            }
+        }
+
+        async function updateRAM() {
+            try {
+                const response = await fetch(`${BASE}/ram?key=${KEY}`);
+                const data = await response.json();
+                
+                document.getElementById('ramVal').innerText = data.used;
+                
+                const badge = document.getElementById('statusBadge');
+                if (data.active) {
+                    badge.innerText = "🟢 Agent Actif";
+                    badge.className = "status-badge status-on";
+                } else {
+                    badge.innerText = "🟠 Agent en pause";
+                    badge.className = "status-badge status-off";
+                }
+            } catch (error) {
+                document.getElementById('statusBadge').innerText = "❌ Agent non détecté";
+                document.getElementById('statusBadge').className = "status-badge status-off";
+            }
+        }
+
+        async function control(action) {
+            try {
+                await fetch(`${BASE}/${action}?key=${KEY}`);
+                setTimeout(updateRAM, 500); // Rafraîchir après l'action
+            } catch (error) {
+                alert("Erreur : Impossible de joindre l'agent.");
+            }
+        }
+
+        // Mise à jour automatique toutes les 2 secondes
+        setInterval(updateRAM, 2000);
+        updateRAM();
+    </script>
+</body>
+</html>
