@@ -12,4 +12,3 @@ Autoriser
 Recherchez et connectez-vous à
 n'importe quel appareil sur votre
 réseau local 
-Autoriser 
